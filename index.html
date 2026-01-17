@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Arbre de décision — Signal faible (organigramme progressif)</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --ink:#071423;
+      --muted:#4a5c77;
+      --line:#cfd9ea;
+      --card:#ffffff;
+      --shadow: 0 18px 60px rgba(7,20,35,.12);
+      --shadow2: 0 10px 28px rgba(7,20,35,.10);
+      --r:20px;
+
+      /* Bleu turquoise */
+      --tq:#06b6b7;
+      --tq2:#047a7b;
+      --tqSoft:#e6feff;
+      --tqLine: rgba(6,182,183,.55);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color:var(--ink);
+      background:
+        radial-gradient(900px 520px at 18% 0%, rgba(6,182,183,.18), transparent 60%),
+        radial-gradient(900px 520px at 88% 22%, rgba(6,182,183,.10), transparent 55%),
+        linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+      display:flex;
+      justify-content:center;
+      padding:28px;
+    }
+
+    .wrap{width:min(1020px, 100%);}
+
+    header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:16px;
+    }
+
+    h1{margin:0; font-size:18px; letter-spacing:.2px}
+    .sub{margin:6px 0 0; color:var(--muted); font-size:13px; line-height:1.45}
+
+    .bar{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end}
+
+    button{
+      appearance:none;
+      border:1px solid var(--line);
+      background: var(--card);
+      color:var(--ink);
+      padding:10px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:13px;
+      box-shadow: 0 1px 0 rgba(7,20,35,.03);
+      transition: transform .08s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    button:hover{box-shadow: 0 12px 30px rgba(7,20,35,.10); border-color:#c7d6ee}
+    button:active{transform: translateY(1px)}
+    button:disabled{opacity:.45; cursor:not-allowed; box-shadow:none}
+
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border:1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.88);
+      color:var(--muted);
+      font-size:12px;
+      white-space:nowrap;
+    }
+    .dot{width:8px; height:8px; border-radius:99px; background: rgba(6,182,183,.90)}
+
+    .stage{
+      background: rgba(255,255,255,.86);
+      border:1px solid rgba(6,182,183,.24);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding:20px;
+      position:relative;
+      overflow:hidden;
+    }
+    .stage::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background: radial-gradient(900px 260px at 15% 0%, rgba(6,182,183,.10), transparent 60%);
+      pointer-events:none;
+    }
+
+    .top-icons{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      justify-content:flex-end;
+      margin-top:6px;
+    }
+    .icon{
+      width:30px;
+      height:30px;
+      border-radius: 12px;
+      display:grid;
+      place-items:center;
+      border:1px solid rgba(6,182,183,.26);
+      background: rgba(6,182,183,.07);
+    }
+    .icon svg{width:16px;height:16px;stroke:var(--tq2)}
+
+    /* Organigram */
+    .chart{position:relative; padding:12px 10px 0; min-height: 600px; z-index:1;}
+    svg#links{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0;}
+    .layer{position:relative; display:flex; justify-content:center; gap:14px; margin: 14px 0; z-index:1;}
+
+    .node{
+      width:min(720px, 100%);
+      background: var(--card);
+      border:1px solid rgba(6,182,183,.24);
+      border-radius: var(--r);
+      padding:18px 18px;
+      box-shadow: var(--shadow2);
+      backdrop-filter: blur(6px);
+    }
+
+    .node.small{
+      width: 210px;
+      padding:10px 14px;
+      border-radius:999px;
+      text-align:center;
+      font-weight:950;
+      letter-spacing:.15px;
+      color: var(--tq2);
+      background: rgba(6,182,183,.06);
+      border-color: rgba(6,182,183,.38);
+    }
+
+    .node .q{margin:0; font-size:17px; font-weight:950; line-height:1.25; letter-spacing:.2px}
+    .node .help{margin:10px 0 0; color:var(--muted); font-size:13.5px; line-height:1.6}
+
+    .choices{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px}
+    .choice{
+      flex: 1 1 auto;
+      min-width: 150px;
+      border-radius: 999px;
+      padding:11px 14px;
+      border:1px solid rgba(6,182,183,.60);
+      background: rgba(6,182,183,.10);
+      color: var(--tq2);
+      font-weight:950;
+      letter-spacing:.15px;
+      box-shadow: 0 10px 20px rgba(6,182,183,.10);
+    }
+    .choice:hover{
+      border-color: rgba(6,182,183,.88);
+      box-shadow: 0 16px 34px rgba(6,182,183,.14);
+    }
+
+    .leaf{
+      width:min(800px, 100%);
+      border-radius: 22px;
+      border:1px solid rgba(6,182,183,.55);
+      background: linear-gradient(180deg, rgba(6,182,183,.10), rgba(6,182,183,.05));
+      padding:18px 18px;
+      box-shadow: var(--shadow2);
+    }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:9px 14px;
+      border-radius: 999px;
+      border:1px solid rgba(6,182,183,.65);
+      background: rgba(6,182,183,.12);
+      color: var(--tq2);
+      font-weight:950;
+      letter-spacing:.9px;
+      font-size:12px;
+      text-transform:uppercase;
+    }
+    .badge svg{width:16px;height:16px;stroke:var(--tq2)}
+
+    .leaf p{margin:0; color:#1f3250; font-size:14.5px; line-height:1.7}
+
+    .fade{animation: fade .22s ease-out both;}
+    @keyframes fade{from{opacity:0; transform: translateY(8px)} to{opacity:1; transform:none}}
+
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      padding: 2px 6px;
+      border:1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255,255,255,.85);
+      color: var(--muted);
+      white-space:nowrap;
+    }
+    .hint{margin-top:12px; color:var(--muted); font-size:12px}
+
+    @media (max-width: 560px){
+      .node.small{width: 44%;}
+      .choice{min-width: 44%;}
+      .chart{min-height: 680px;}
+      .leaf p{font-size:13.5px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Arbre de décision — Signal faible</h1>
+        <p class="sub">Organigramme qui se déploie progressivement. Couleur dominante : bleu turquoise. Lisibilité renforcée (taille/espacement).</p>
+        <!-- 3 petits visuels liés au sujet -->
+        <div class="top-icons" aria-label="Icônes thématiques">
+          <div class="icon" title="Investigation">
+            <!-- loupe -->
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="M20 20l-3.5-3.5"></path>
+            </svg>
+          </div>
+          <div class="icon" title="Alerte">
+            <!-- cloche -->
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7"></path>
+              <path d="M13.73 21a2 2 0 01-3.46 0"></path>
+            </svg>
+          </div>
+          <div class="icon" title="Surveillance">
+            <!-- œil -->
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="bar">
+        <span class="chip"><span class="dot"></span><span id="status">Prêt</span></span>
+        <button id="back" title="Retour (raccourci : ←)">← Retour</button>
+        <button id="reset" title="Recommencer (raccourci : R)">Recommencer</button>
+      </div>
+    </header>
+
+    <section class="stage">
+      <div class="chart" id="chart">
+        <svg id="links" aria-hidden="true"></svg>
+      </div>
+      <div class="hint">Raccourcis : <span class="kbd">←</span> retour, <span class="kbd">R</span> recommencer.</div>
+    </section>
+  </div>
+
+  <script>
+    // IMPORTANT : textes repris STRICTEMENT depuis le schéma fourni.
+
+    const NODES = {
+      Q1: {
+        id: 'Q1',
+        type: 'question',
+        title: "Y a-t-il un intérêt à intervenir précocement sur le sujet ?",
+        options: [
+          { label: 'Oui', next: 'Q2' },
+          { label: 'Incertain', next: 'R_INVEST_PAS_SUR' },
+          { label: 'Non', next: 'Q3' },
+        ]
+      },
+
+      Q2: {
+        id: 'Q2',
+        type: 'question',
+        title: "A-t-on la capacité d'agir ?",
+        options: [
+          { label: 'Oui', next: 'R_ALERTER' },
+          { label: 'Non', next: 'R_INVEST_CAPA_NON' }
+        ]
+      },
+
+      Q3: {
+        id: 'Q3',
+        type: 'question',
+        title: "Le sujet pourrait-il connaître des développements rapides ?",
+        options: [
+          { label: 'Oui', next: 'Q4' },
+          { label: 'Non', next: 'R_ARCHIVER_STAB' }
+        ]
+      },
+
+      Q4: {
+        id: 'Q4',
+        type: 'question',
+        title: "Est-il possible de mettre en place des actions rapidement ?",
+        options: [
+          { label: 'Oui', next: 'R_ARCHIVER_ACTIONS' },
+          { label: 'Non', next: 'R_SURVEILLER' }
+        ]
+      },
+
+      // Résultats (textes strictement identiques)
+      R_ALERTER: {
+        id: 'R_ALERTER',
+        type: 'result',
+        key: 'ALERTER',
+        icon: 'bell',
+        title: 'ALERTER',
+        text: "ALERTER. Vous décidez de considérer que le sujet nécessite une intervention précoce, soit pour contrer la menace, soit pour profiter de l'opportunité. Ce sujet doit être réorienté vers l'équipe ou la commission en capacité d'agir."
+      },
+
+      R_INVEST_CAPA_NON: {
+        id: 'R_INVEST_CAPA_NON',
+        type: 'result',
+        key: 'INVESTIGUER',
+        icon: 'search',
+        title: 'INVESTIGUER',
+        text: "INVESTIGUER. Vous décidez que le sujet nécessite une intervention précoce mais vous n'avez pas la capacité de contrer la menace ou pour profiter de l'opportunité. Ce sujet doit être réorienté vers l'équipe ou la commission en capacité d'agir. Le travail doit donc porter sur ce que requiert l'action."
+      },
+
+      R_INVEST_PAS_SUR: {
+        id: 'R_INVEST_PAS_SUR',
+        type: 'result',
+        key: 'INVESTIGUER',
+        icon: 'search',
+        title: 'INVESTIGUER',
+        text: "INVESTIGUER. Vous décidez que le sujet nécessite une intervention précoce mais vous n'êtes pas certain de votre capacité de contrer la menace ou de profiter de l'opportunité. L'investigation doit alors permettre une compréhension plus approfondie du sujet et de ce qui pourrait permettre l'action."
+      },
+
+      R_ARCHIVER_STAB: {
+        id: 'R_ARCHIVER_STAB',
+        type: 'result',
+        key: 'ARCHIVER',
+        icon: 'archive',
+        title: 'ARCHIVER',
+        text: "ARCHIVER. Il n'y a pas d'avantage à aller plus avant et le signal est en cours de stabilisation ou il ets moins source d'incertitude."
+      },
+
+      R_ARCHIVER_ACTIONS: {
+        id: 'R_ARCHIVER_ACTIONS',
+        type: 'result',
+        key: 'ARCHIVER',
+        icon: 'archive',
+        title: 'ARCHIVER',
+        text: "ARCHIVER. Vous décidez qu'il n'y a pas d'intérêt à agir rapidement mais il y a une grande probabilité que le problème connaisse un développement rapide et l'équipe a la capacité d'agir vite si nécessaire. ARCHIVAGE."
+      },
+
+      R_SURVEILLER: {
+        id: 'R_SURVEILLER',
+        type: 'result',
+        key: 'SURVEILLER',
+        icon: 'eye',
+        title: 'SURVEILLER',
+        text: "SURVEILLER. Il n'y a pas d'intérêt à agit dans l'immédiat et en dépit d'une grande probabilité d'une évolution du sujet, la capacité à agir manque. SURVEILLANCE DU SIGNAL qu'il soit possiblement menaçant ou porteur d'opportunité."
+      }
+    };
+
+    const state = { steps: [] }; // [{qId, choice, nextId}]
+
+    const chart = document.getElementById('chart');
+    const svg = document.getElementById('links');
+    const status = document.getElementById('status');
+    const backBtn = document.getElementById('back');
+    const resetBtn = document.getElementById('reset');
+
+    function currentNode(){
+      if(state.steps.length === 0) return NODES.Q1;
+      return NODES[state.steps[state.steps.length - 1].nextId];
+    }
+
+    function setStatus(){
+      const n = currentNode();
+      if(state.steps.length === 0) status.textContent = 'Prêt';
+      else if(n.type === 'result') status.textContent = 'Décision prise';
+      else status.textContent = 'En cours';
+
+      backBtn.disabled = state.steps.length === 0;
+    }
+
+    function reset(){
+      state.steps = [];
+      render();
+    }
+
+    function back(){
+      if(state.steps.length === 0) return;
+      state.steps.pop();
+      render();
+    }
+
+    function choose(qId, label){
+      const q = NODES[qId];
+      const opt = q.options.find(o => o.label === label);
+      if(!opt) return;
+      state.steps.push({ qId, choice: label, nextId: opt.next });
+      render();
+    }
+
+    function clearLinks(){
+      while(svg.firstChild) svg.removeChild(svg.firstChild);
+    }
+
+    function drawLine(x1,y1,x2,y2){
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      const midY = (y1 + y2) / 2;
+      const d = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+      path.setAttribute('d', d);
+      path.setAttribute('fill','none');
+      path.setAttribute('stroke', getComputedStyle(document.documentElement).getPropertyValue('--tqLine').trim() || 'rgba(6,182,183,.55)');
+      path.setAttribute('stroke-width','2.5');
+      svg.appendChild(path);
+    }
+
+    function getCenter(el){
+      const r = el.getBoundingClientRect();
+      const p = chart.getBoundingClientRect();
+      return {
+        x: (r.left - p.left) + r.width/2,
+        yTop: (r.top - p.top),
+        yBottom: (r.top - p.top) + r.height
+      };
+    }
+
+    function iconSvg(kind){
+      if(kind === 'search'){
+        return `
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="M20 20l-3.5-3.5"></path>
+          </svg>
+        `;
+      }
+      if(kind === 'bell'){
+        return `
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7"></path>
+            <path d="M13.73 21a2 2 0 01-3.46 0"></path>
+          </svg>
+        `;
+      }
+      if(kind === 'eye'){
+        return `
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        `;
+      }
+      // archive
+      return `
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 8v13H3V8"></path>
+          <path d="M22 3H2v5h20V3z"></path>
+          <path d="M10 12h4"></path>
+        </svg>
+      `;
+    }
+
+    function cleanResultText(key, text){
+      // N'afficher le mot-cle qu'une seule fois (dans le badge)
+      let t = String(text);
+
+      // Supprimer la mention en tete: "KEY." (avec ou sans espaces)
+      const head = new RegExp('^' + escapeRegExp(key) + '\.(\s*)');
+      t = t.replace(head, '');
+
+      // Supprimer les autres occurrences exactes du mot-cle en MAJUSCULES
+      const word = new RegExp('\b' + escapeRegExp(key) + '\b', 'g');
+      t = t.replace(word, '');
+
+      // Nettoyages simples
+      t = t
+        .replace(/\s{2,}/g, ' ')
+        .replace(/\s+\./g, '.')
+        .replace(/\s+,/g, ',')
+        .replace(/\s+;/g, ';')
+        .replace(/\s+:/g, ':')
+        .trim();
+
+      return t;
+    }
+
+    function escapeRegExp(s){
+      return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\$&');
+    }
+
+    function render(){
+      setStatus();
+      [...chart.querySelectorAll('.layer')].forEach(n => n.remove());
+
+      const layers = [];
+
+      function questionNode(qId, interactive){
+        const q = NODES[qId];
+        const el = document.createElement('div');
+        el.className = 'node fade';
+        el.dataset.node = qId;
+        el.innerHTML = `
+          <p class="q">${escapeHtml(q.title)}</p>
+          ${interactive ? `
+            <div class="choices">
+              ${q.options.map(o => `<button class="choice" data-q="${qId}" data-label="${escapeHtml(o.label)}">${escapeHtml(o.label)}</button>`).join('')}
+            </div>
+          ` : ''}
+        `;
+        return el;
+      }
+
+      function choiceChip(text){
+        const el = document.createElement('div');
+        el.className = 'node small fade';
+        el.textContent = text;
+        return el;
+      }
+
+      function resultNode(rId){
+        const r = NODES[rId];
+        const el = document.createElement('div');
+        el.className = 'leaf fade';
+        el.dataset.node = rId;
+
+        // Texte strict, mise en valeur visuelle des mots clés
+                // Mot-cle uniquement dans le badge (icone + libelle)
+        const cleaned = cleanResultText(r.key, r.text);
+        const rich = escapeHtml(cleaned);
+
+        el.innerHTML = `
+          <span class="badge">${iconSvg(r.icon)} ${escapeHtml(r.key)}</span>
+          <p>${rich}</p>
+        `;
+        return el;
+      }
+
+      // Layer 0: Q1 (interactive if unanswered)
+      const q1Answered = state.steps.find(s => s.qId === 'Q1');
+      const l0 = document.createElement('div');
+      l0.className = 'layer';
+      l0.appendChild(questionNode('Q1', !q1Answered));
+      chart.appendChild(l0);
+      layers.push(l0);
+
+      // Render chosen path progressively
+      for(let i=0;i<state.steps.length;i++){
+        const s = state.steps[i];
+
+        const lc = document.createElement('div');
+        lc.className = 'layer';
+        const chip = choiceChip(s.choice);
+        chip.dataset.node = `chip-${i}`;
+        lc.appendChild(chip);
+        chart.appendChild(lc);
+        layers.push(lc);
+
+        const next = NODES[s.nextId];
+        const ln = document.createElement('div');
+        ln.className = 'layer';
+
+        if(next.type === 'question'){
+          const isUnanswered = (i === state.steps.length - 1);
+          ln.appendChild(questionNode(next.id, isUnanswered));
+        } else {
+          ln.appendChild(resultNode(next.id));
+        }
+
+        chart.appendChild(ln);
+        layers.push(ln);
+
+        if(next.type === 'result') break;
+      }
+
+      chart.querySelectorAll('button.choice').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const qId = btn.getAttribute('data-q');
+          const label = btn.getAttribute('data-label');
+          choose(qId, label);
+        });
+      });
+
+      requestAnimationFrame(() => {
+        clearLinks();
+        connectRendered(layers);
+      });
+    }
+
+    function connectRendered(layers){
+      for(let i=0;i<layers.length-1;i++){
+        const a = layers[i].querySelector('[data-node]') || layers[i].firstElementChild;
+        const b = layers[i+1].querySelector('[data-node]') || layers[i+1].firstElementChild;
+        if(!a || !b) continue;
+        const A = getCenter(a);
+        const B = getCenter(b);
+        drawLine(A.x, A.yBottom + 4, B.x, B.yTop - 4);
+      }
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'",'&#039;');
+    }
+
+    backBtn.addEventListener('click', back);
+    resetBtn.addEventListener('click', reset);
+    window.addEventListener('keydown', (e) => {
+      if(e.key === 'ArrowLeft') back();
+      if(e.key === 'r' || e.key === 'R') reset();
+    });
+
+    reset();
+
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        const layers = [...chart.querySelectorAll('.layer')];
+        clearLinks();
+        connectRendered(layers);
+      }, 60);
+    });
+  </script>
+</body>
+</html>
